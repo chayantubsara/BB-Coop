@@ -1,403 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <base target="_top">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-      <title>BB-COOP-member</title>
-  <link rel="icon" href="bank-building.png" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>BB-COOP-member</title>
+    <link rel="icon" href="bank-building.png" type="image/x-icon">
+
     <style>
-        body { background-color: #f8f9fa; font-family: 'Sarabun', sans-serif; }
-        .balance-card {
-            background: linear-gradient(135deg, #0d6efd, #0dcaf0);
-            color: white; border-radius: 15px; padding: 20px;
-            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+        /* ลบ margin/padding ของ body เพื่อให้ iframe เต็มจอจริง ๆ */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* ป้องกัน scrollbar ซ้อนกัน */
+            background-color: #f8f9fa;
         }
-        .status-pending { color: #ffc107; font-weight: bold; }
-        .status-cooking { color: #0d6efd; font-weight: bold; }
-        .status-finished { color: #198754; font-weight: bold; }
-        .card-order { transition: 0.3s; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-order.finished { border-left: 5px solid #198754; background-color: #f0fff4; }
+
+        /* ตั้งค่า iframe ให้เต็มหน้าจอ */
+        #app-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* เทคนิคเพิ่มเติม: ป้องกัน iOS ซูมตอนแตะ input (ใส่ไว้เผื่อ Safari) */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
     </style>
 </head>
 <body>
 
-    <audio id="orderReadySound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <iframe 
+        id="app-container"
+        src="https://script.google.com/macros/s/AKfycbx6CYoChY4I--CIRQzHI0q-0xWGClIFBEWEnh-h1EA5oc2-IXSquWGKjTV0fm72Zc1JyQ/exec" 
+        allow="geolocation; microphone; camera; midi; vr; accelerometer; gyroscope; payment; ambient-light-sensor; encrypted-media; usb"
+        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-forms"
+    ></iframe>
 
-    <div id="loginSection" class="container mt-5" style="max-width: 400px;">
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center p-4">
-                <div class="bg-primary text-white d-inline-block rounded-circle p-3 mb-3">
-                    <i class="fas fa-university fs-1"></i>
-                </div>
-                <h4 class="mb-3 text-primary fw-bold">สหกรณ์โรงเรียน</h4>
-                <p class="text-muted small mb-4">เข้าสู่ระบบสมาชิก</p>
-                
-                <div class="form-floating mb-3">
-                    <input type="text" id="loginUser" class="form-control" placeholder="รหัสสมาชิก">
-                    <label>รหัสสมาชิก (Member ID)</label>
-                </div>
-                <div class="form-floating mb-4">
-                    <input type="password" id="loginPass" class="form-control" placeholder="รหัสผ่าน">
-                    <label>รหัสผ่าน (เลขบัตร ปชช.)</label>
-                </div>
-                
-                <button onclick="loginMember()" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">เข้าสู่ระบบ</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="appSection" class="container mt-3 d-none" style="max-width: 500px;">
-        <div class="d-flex justify-content-between align-items-center mb-3 px-2">
-            <div>
-                <h5 class="m-0 fw-bold text-primary"><i class="fas fa-user-circle"></i> <span id="memberName">...</span></h5>
-                <small class="text-muted" id="memberIdDisplay">ID: ...</small>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#" onclick="changePassword()"><i class="fas fa-key me-2"></i> เปลี่ยนรหัสผ่าน</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <ul class="nav nav-pills mb-3 nav-fill bg-white p-1 rounded shadow-sm" id="pills-tab">
-            <li class="nav-item"><button class="nav-link active rounded" data-bs-toggle="pill" data-bs-target="#tab-home">หน้าหลัก</button></li>
-            <li class="nav-item"><button class="nav-link rounded" data-bs-toggle="pill" data-bs-target="#tab-orders">
-                รายการสั่งซื้อ <span id="badgeOrderCount" class="badge bg-danger rounded-pill d-none">0</span>
-            </button></li>
-        </ul>
-
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="tab-home">
-                <div class="balance-card mb-4 text-center position-relative overflow-hidden">
-                    <div class="position-absolute top-0 end-0 p-3 opacity-25"><i class="fas fa-wallet fa-5x"></i></div>
-                    <div class="d-inline-block bg-white bg-opacity-25 rounded-pill px-3 py-1 mb-2">
-                        <i class="fas fa-star text-warning"></i> <span id="memberPoints" class="fw-bold">0</span> แต้ม
-                    </div>
-                    <h1 class="display-4 fw-bold mb-0">฿<span id="memberBalance">0.00</span></h1>
-                    <small class="opacity-75">ยอดเงินคงเหลือ</small>
-                </div>
-                
-                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
-                    <i class="fas fa-info-circle fs-4 me-3 text-info"></i>
-                    <div>
-                        <strong>รอจ่ายเงิน?</strong>
-                        <div class="small text-muted">ระบบจะเด้งหน้าต่างแจ้งเตือนอัตโนมัติเมื่อมีการเรียกเก็บเงิน</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="tab-orders">
-                <h6 class="text-muted mb-3 ps-2 border-start border-4 border-primary ms-1"> สถานะออเดอร์ล่าสุด</h6>
-                <div id="myOrdersList" class="pb-5">
-                    <div class="text-center mt-5 text-muted">
-                        <div class="spinner-border text-primary mb-2"></div>
-                        <div>กำลังโหลดข้อมูล...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script>
-        // --- CONFIG ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDmgINN-gp5yIU_TWsjwxdiPUsOY6U8bhk",
-            authDomain: "bloxburg-pos.firebaseapp.com",
-            databaseURL: "https://bloxburg-pos-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "bloxburg-pos",
-            storageBucket: "bloxburg-pos.firebasestorage.app",
-            messagingSenderId: "521608096360",
-            appId: "1:521608096360:web:802414f6491eee3a16e9dd"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        let currentMember = null;
-        let notifSound = document.getElementById('orderReadySound');
-
-        // Check Session
-        const sessionMemId = localStorage.getItem('coop_member_id');
-        if (sessionMemId) {
-            autoLogin(sessionMemId);
-        }
-
-        // --- AUTHENTICATION ---
-        function loginMember() {
-            const u = document.getElementById('loginUser').value.trim();
-            const p = document.getElementById('loginPass').value.trim();
-
-            if (!u || !p) return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบ', 'warning');
-
-            // เปลี่ยน Logic Login: เช็ค Password ด้วย
-            db.ref('members/' + u).once('value').then(snap => {
-                if (snap.exists()) {
-                    const mem = snap.val();
-                    // เช็ค Password (ถ้าไม่มี password ใน DB ให้ถือว่า login ได้เลยสำหรับข้อมูลเก่า)
-                    if (!mem.password || mem.password === p) {
-                        enterApp(u, mem);
-                    } else {
-                        Swal.fire('รหัสผ่านผิด', 'กรุณาตรวจสอบเลขบัตรประชาชน หรือรหัสผ่านของคุณ', 'error');
-                    }
-                } else {
-                    Swal.fire('ไม่พบสมาชิก', 'กรุณาตรวจสอบรหัสสมาชิก', 'error');
-                }
-            });
-        }
-
-        function autoLogin(id) {
-            db.ref('members/' + id).once('value').then(snap => {
-                if(snap.exists()) {
-                    enterApp(id, snap.val());
-                } else {
-                    logout(); // User หายไปจากระบบ
-                }
-            });
-        }
-
-        function enterApp(id, data) {
-            currentMember = { id: id, ...data };
-            localStorage.setItem('coop_member_id', id);
-            
-            // Update UI
-            document.getElementById('loginSection').classList.add('d-none');
-            document.getElementById('appSection').classList.remove('d-none');
-            
-            // Init Listeners
-            watchUserData();
-            watchPaymentRequests();
-            watchMyOrders();
-            
-            // Play sound trick (to enable audio on mobile)
-            notifSound.play().catch(()=>{}); 
-            notifSound.pause();
-        }
-
-        function logout() {
-            localStorage.removeItem('coop_member_id');
-            location.reload();
-        }
-
-        function changePassword() {
-            Swal.fire({
-                title: 'เปลี่ยนรหัสผ่าน',
-                html: `
-                    <input type="password" id="oldPass" class="swal2-input" placeholder="รหัสผ่านเดิม">
-                    <input type="password" id="newPass" class="swal2-input" placeholder="รหัสผ่านใหม่">
-                    <input type="password" id="confPass" class="swal2-input" placeholder="ยืนยันรหัสผ่านใหม่">
-                `,
-                confirmButtonText: 'บันทึก',
-                showCancelButton: true,
-                preConfirm: () => {
-                    const oldP = document.getElementById('oldPass').value;
-                    const newP = document.getElementById('newPass').value;
-                    const confP = document.getElementById('confPass').value;
-                    
-                    if(newP !== confP) return Swal.showValidationMessage('รหัสผ่านใหม่ไม่ตรงกัน');
-                    if(newP.length < 4) return Swal.showValidationMessage('รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร');
-                    
-                    // เช็ครหัสเดิมจาก Local Data
-                    if(currentMember.password && currentMember.password !== oldP) {
-                        return Swal.showValidationMessage('รหัสผ่านเดิมไม่ถูกต้อง');
-                    }
-                    return newP;
-                }
-            }).then((res) => {
-                if(res.isConfirmed) {
-                    db.ref('members/' + currentMember.id).update({ password: res.value }).then(() => {
-                        currentMember.password = res.value; // Update Local
-                        Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success');
-                    });
-                }
-            });
-        }
-
-        // --- REALTIME DATA ---
-        function watchUserData() {
-            db.ref('members/' + currentMember.id).on('value', snap => {
-                const data = snap.val();
-                if(data) {
-                    currentMember = { id: snap.key, ...data }; // Update Local Data
-                    document.getElementById('memberName').innerText = data.name + ' ' + (data.surname || '');
-                    document.getElementById('memberIdDisplay').innerText = 'ID: ' + snap.key;
-                    document.getElementById('memberBalance').innerText = (data.balance || 0).toLocaleString();
-                    document.getElementById('memberPoints').innerText = (data.points || 0).toLocaleString();
-                }
-            });
-        }
-
-        // --- PAYMENT REQUEST ---
-        function watchPaymentRequests() {
-            db.ref('member_requests/' + currentMember.id).on('value', snap => {
-                const req = snap.val();
-                if (req && req.status === 'waiting') {
-                    // สร้างข้อความแจ้งเตือน
-                    let msgHtml = '';
-                    if (req.amount === 0 && req.points_used > 0) {
-                        msgHtml = `<div class="text-warning fs-1 mb-2"><i class="fas fa-star"></i></div>
-                                   <h3 class="fw-bold text-dark">ใช้แต้ม ${req.points_used} คะแนน</h3>
-                                   <p class="text-muted">ร้านค้าขอตัดแต้มเพื่อแลกส่วนลด</p>`;
-                    } else {
-                        msgHtml = `<div class="text-primary fs-1 mb-2"><i class="fas fa-coins"></i></div>
-                                   <h3 class="fw-bold text-dark">฿${req.amount.toLocaleString()}</h3>
-                                   <p class="text-muted">ร้านค้าเรียกเก็บเงินจากกระเป๋า</p>`;
-                        if (req.points_used > 0) {
-                            msgHtml += `<div class="alert alert-warning py-1"><small>และตัดแต้ม ${req.points_used} คะแนน</small></div>`;
-                        }
-                    }
-
-                    Swal.fire({
-                        title: 'ยืนยันรายการ',
-                        html: msgHtml,
-                        showCancelButton: true,
-                        confirmButtonColor: '#0d6efd',
-                        cancelButtonColor: '#dc3545',
-                        confirmButtonText: 'ยืนยัน / จ่ายเงิน',
-                        cancelButtonText: 'ปฏิเสธ',
-                        allowOutsideClick: false
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // ตรวจสอบเงินอีกครั้ง (Client-side pre-check)
-                            if (currentMember.balance >= req.amount) {
-                                const updates = {};
-                                // คำนวณแต้มที่ได้รับ (20 บาท = 1 แต้ม)
-                                const pointsEarned = Math.floor(req.amount / 20);
-                                const newBalance = currentMember.balance - req.amount;
-                                const newPoints = (currentMember.points || 0) - (req.points_used || 0) + pointsEarned;
-
-                                updates['members/' + currentMember.id + '/balance'] = newBalance;
-                                updates['members/' + currentMember.id + '/points'] = newPoints;
-                                updates['member_requests/' + currentMember.id + '/status'] = 'confirmed';
-                                
-                                db.ref().update(updates).then(() => {
-                                    Swal.fire('สำเร็จ', `ชำระเงินแล้ว (ได้รับ ${pointsEarned} แต้ม)`, 'success');
-                                });
-                            } else {
-                                db.ref('member_requests/' + currentMember.id).update({ status: 'failed' });
-                                Swal.fire('ยอดเงินไม่พอ', 'กรุณาเติมเงินที่เคาน์เตอร์', 'error');
-                            }
-                        } else {
-                            db.ref('member_requests/' + currentMember.id).update({ status: 'cancelled' });
-                        }
-                    });
-                }
-            });
-        }
-
-        // --- ORDER TRACKING & NOTIFICATION ---
-        let knownFinishedOrders = new Set(); // กันแจ้งเตือนซ้ำ
-
-        function watchMyOrders() {
-            // ดึง 20 รายการล่าสุด
-            db.ref('orders').orderByChild('timestamp').limitToLast(20).on('value', snap => {
-                const list = document.getElementById('myOrdersList');
-                list.innerHTML = '';
-                
-                if (!snap.exists()) {
-                    list.innerHTML = '<div class="text-center text-muted mt-5"><i class="fas fa-receipt fs-1 mb-3 opacity-25"></i><br>ไม่มีประวัติการสั่งซื้อ</div>';
-                    return;
-                }
-
-                const myOrders = [];
-                snap.forEach(child => {
-                    const order = child.val();
-                    if (order.memberId === currentMember.id) {
-                        myOrders.unshift({ key: child.key, ...order });
-                        
-                        // Check Notification: ถ้าสถานะเป็น finished และยังไม่เคยแจ้งเตือน
-                        if (order.status === 'finished' && !knownFinishedOrders.has(child.key)) {
-                            knownFinishedOrders.add(child.key);
-                            notifyOrderReady(child.key);
-                        }
-                    }
-                });
-
-                // Update Badge Count (นับเฉพาะที่ยังไม่เสร็จ)
-                const activeCount = myOrders.filter(o => o.status !== 'finished').length;
-                const badge = document.getElementById('badgeOrderCount');
-                if(activeCount > 0) {
-                    badge.innerText = activeCount;
-                    badge.classList.remove('d-none');
-                } else {
-                    badge.classList.add('d-none');
-                }
-
-                if (myOrders.length === 0) {
-                    list.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบรายการของคุณ</div>';
-                    return;
-                }
-
-                // Render List
-                myOrders.forEach(o => {
-                    const date = new Date(o.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                    let statusHtml = '';
-                    let cardClass = 'card-order';
-
-                    if (o.status === 'pending') {
-                        statusHtml = '<span class="status-pending"><i class="fas fa-clock"></i> รอคิว</span>';
-                    } else if (o.status === 'cooking') {
-                        statusHtml = '<span class="status-cooking"><i class="fas fa-fire"></i> กำลังปรุง</span>';
-                    } else if (o.status === 'finished') {
-                        statusHtml = '<span class="status-finished"><i class="fas fa-check-circle"></i> เสร็จแล้ว</span>';
-                        cardClass += ' finished';
-                    }
-
-                    list.innerHTML += `
-                        <div class="card mb-3 ${cardClass}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0 fw-bold">Order #${o.orderId || o.key}</h6>
-                                    ${statusHtml}
-                                </div>
-                                <div class="small text-muted mb-2">
-                                    <i class="far fa-calendar-alt"></i> ${date} • ${o.items.length} รายการ
-                                </div>
-                                <div class="d-flex justify-content-between align-items-end border-top pt-2 mt-2">
-                                    <div class="small text-muted">จ่ายด้วย: ${o.paymentMethod === 'coop' ? 'Wallet' : 'เงินสด'}</div>
-                                    <div class="fw-bold text-primary">฿${(o.netTotal || o.grandTotal).toLocaleString()}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        }
-
-        function notifyOrderReady(orderId) {
-            // Play Sound
-            notifSound.currentTime = 0;
-            notifSound.play().catch(e => console.log("Audio play failed:", e));
-
-            // Show Toast
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
-
-            Toast.fire({
-                icon: 'success',
-                title: `ออเดอร์ #${orderId} เสร็จแล้ว!`,
-                text: 'อาหารของคุณพร้อมเสิร์ฟแล้วครับ'
-            });
-        }
-    </script>
 </body>
 </html>
